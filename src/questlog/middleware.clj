@@ -4,6 +4,7 @@
 
 (defn wrap-request-logger [handler {:keys [logger redact-keys] :as opts
                                     :or {redact-keys #{:authorization
+                                                       :cookies
                                                        :password}}}]
   (fn [req]
     (let [req (request/with-id req)
@@ -12,10 +13,11 @@
       (logger/log-request logger redacted-req)
 
       (try
-        (let [{:keys [status] :as resp} (handler req)]
+        (let [{:keys [status] :as resp} (handler req)
+              redacted-resp (request/redact resp redact-keys)]
           (if (< status 500)
-            (logger/log-response logger redacted-req resp)
-            (logger/log-error logger redacted-req resp))
+            (logger/log-response logger redacted-req redacted-resp)
+            (logger/log-error logger redacted-req redacted-resp))
           resp)
 
         (catch Exception e
