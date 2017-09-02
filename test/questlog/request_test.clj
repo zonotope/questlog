@@ -7,13 +7,13 @@
     (let [req {:foo "bar" :baz "bip"}
           subject (with-id req)]
 
-      (is (uuid? (:questlog.request/id subject))
-          "adds a uuid under the `:questlog.request/id` key"))))
+      (is (string? (:questlog.request/id subject))
+          "adds a string under the `:questlog.request/id` key"))))
 
 (deftest redact-test
   (testing "'redact'"
     (let [req {:foo "bar" :password "secret"
-               :headers {:baz "bip" :authorization "super-secret"}}]
+               :headers {"baz" "bip" "authorization" "super-secret"}}]
 
       (testing "with redact keys"
         (let [redact-keys #{:authorization :password}
@@ -22,8 +22,8 @@
           (is (= redacted (:password subject))
               "redacts top level keys.")
 
-          (is (= redacted (:authorization (:headers subject)))
-              "redacts nested keys.")))
+          (is (= redacted (get (:headers subject) "authorization"))
+              "redacts both string and nested keys.")))
 
       (testing "with no redact keys"
         (let [redact-keys #{}

@@ -7,7 +7,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn with-id [req]
-  (let [id (UUID/randomUUID)]
+  (let [id (str (UUID/randomUUID))]
     (assoc req ::id id)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -19,7 +19,7 @@
 
 (defn- redact-map-entry [entry redact-keys]
   (let [[k v] entry]
-    (if (get redact-keys k)
+    (if (get redact-keys (keyword k))
       [k redacted]
       entry)))
 
