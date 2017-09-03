@@ -17,35 +17,39 @@
 (defn- print-data [data color]
   (-> data pr-str (ansi/style color)))
 
+(defn- print-context [ctx]
+  (print-data ctx :magenta))
+
 (defn- print-event [evt ctx]
   (join (print-data evt :cyan)
-        (print-data ctx :magenta)))
+        (print-context ctx)))
 
 (defn- print-error [evt ctx]
   (join (print-data evt :red)
-        (print-data ctx :yellow)))
+        (print-context ctx)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; log event and context data                                               ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- request-info [req]
-  (select-keys req [::request/id :headers :params :remote-addr :request-method
-                    :query-string :uri]))
+(defn- request-info [{:keys [::request/id] :as req}]
+  (let [summary (select-keys req [:request-method :uri :params :query-string
+                                  :remote-addr])]
+    {:summary summary, :request-id id}))
 
-(defn- request-details [req]
-  (select-keys req [::request/id :character-encoding :content-length
-                    :content-type :query-string :remote-addr :request-method
-                    :scheme :server-name :server-port :uri]))
+(defn- request-details [{:keys [::request/id] :as req}]
+  (let [details (select-keys req [:character-encoding :content-length
+                                  :content-type :headers :query-string
+                                  :remote-addr :request-method :scheme
+                                  :server-name :server-port :uri])]
+    {:details details, :request-id id}))
 
-(defn- response-info [req resp]
-  (let [req-data (request-info req)]
-    {:request req-data, :response resp}))
+(defn- response-info [{:keys [::request/id]} resp]
+  {:response resp, :request-id id})
 
-(defn- exception-details [req e]
-  (let [req-data (request-info req)
-        exception-data (stactrace/parse-exception e)]
-    {:request req-data, :exception exception-data}))
+(defn- exception-details [{:keys [::request/id]} e]
+  (let [exception-data (stactrace/parse-exception e)]
+    {:exception exception-data, :request-id id}))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; logger                                                                   ;;
@@ -54,17 +58,17 @@
 (defrecord ToolsLogging []
   RequestLogger
   (log-request [_ req]
-    (log/info (print-event ::request/received (request-info req)))
-    (log/debug (print-event ::request/details (request-details req))))
+    (log/info (print-event :http.request/received (request-info req)))
+    (log/debug (print-event :http.request/details (request-details req))))
 
   (log-response [_ req resp]
-    (log/info (print-event ::request/response (response-info req resp))))
+    (log/info (print-event :http.response/sending (response-info req resp))))
 
   (log-error [_ req resp]
-    (log/error (print-error ::request/error (response-info req resp))))
+    (log/error (print-error :http.response/error (response-info req resp))))
 
   (log-exception [_ req e]
-    (log/error (print-error ::request/exception (exception-details req e)))))
+    (log/error (print-error :http.response/exception (exception-details req e)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; log middleware                                                           ;;
