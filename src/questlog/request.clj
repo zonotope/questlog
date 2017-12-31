@@ -19,7 +19,8 @@
 
 (defn- redact-map-entry [entry redact-keys]
   (let [[k v] entry]
-    (if (get redact-keys (keyword k))
+    (if (or (get redact-keys (-> k keyword))
+            (get redact-keys (-> k name keyword)))
       [k redacted]
       entry)))
 
